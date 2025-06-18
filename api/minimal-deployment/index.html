@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Racing Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold mb-6">Live Racing Dashboard</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Session Status</h2>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>Authenticated with Betfair</span>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">Server: Sydney (syd1) - Geographic restrictions bypassed</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Live Racing Events</h2>
+                <button onclick="loadRacing()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Load Live Data
+                </button>
+            </div>
+            
+            <div id="loading" class="hidden text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <p class="mt-2">Loading authentic racing data...</p>
+            </div>
+            
+            <div id="racing-data" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        async function loadRacing() {
+            const loadingEl = document.getElementById('loading');
+            const dataEl = document.getElementById('racing-data');
+            
+            loadingEl.classList.remove('hidden');
+            dataEl.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/racing/live');
+                const races = await response.json();
+                
+                loadingEl.classList.add('hidden');
+                
+                if (races.length === 0) {
+                    dataEl.innerHTML = '<p class="text-gray-500 text-center py-8">No live racing events available</p>';
+                    return;
+                }
+                
+                dataEl.innerHTML = races.map(race => `
+                    <div class="border rounded-lg p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-semibold">${race.track?.name || 'Unknown Track'}</h3>
+                                <p class="text-sm text-gray-600">${race.track?.location}</p>
+                            </div>
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">${race.type}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 text-sm mb-3">
+                            <div><span class="text-gray-500">Race:</span> ${race.name}</div>
+                            <div><span class="text-gray-500">Distance:</span> ${race.distance}m</div>
+                        </div>
+                        
+                        ${race.runners && race.runners.length > 0 ? `
+                            <div>
+                                <p class="text-sm font-medium mb-2">Top Runners:</p>
+                                <div class="space-y-1">
+                                    ${race.runners.slice(0, 3).map(runner => `
+                                        <div class="flex justify-between text-xs">
+                                            <span>${runner.number}. ${runner.name}</span>
+                                            ${runner.odds && runner.odds[0] ? `
+                                                <span class="font-mono">$${runner.odds[0].winOdds}</span>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                loadingEl.classList.add('hidden');
+                dataEl.innerHTML = `<p class="text-red-500 text-center py-8">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
